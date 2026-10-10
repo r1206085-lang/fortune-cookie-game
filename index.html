@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>每日療癒幸運餅乾與小夥伴養成</title>
+    <!-- 引入 Tailwind CSS -->
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style>
+        body { font-family: 'Noto Sans TC', sans-serif; }
+        @keyframes bounceSlow {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-6px); }
+        }
+        .animate-bounce-slow {
+            animation: bounceSlow 3s ease-in-out infinite;
+        }
+        @keyframes dropIntoJar {
+            0% { transform: translateY(-50px) scale(1.5); opacity: 0; }
+            60% { transform: translateY(8px) scale(1); opacity: 1; }
+            100% { transform: translateY(0) scale(1); opacity: 1; }
+        }
+        .animate-drop {
+            animation: dropIntoJar 0.5s ease-out forwards;
+        }
+        #wheel-container {
+            transition: transform 4s cubic-bezier(0.15, 0.75, 0.14, 1);
+            background: conic-gradient(
+                #fde68a 0deg 72deg,    
+                #fcd34d 72deg 144deg,  
+                #fbbf24 144deg 216deg, 
+                #f59e0b 216deg 288deg, 
+                #d97706 288deg 360deg  
+            );
+        }
+        .wheel-item {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .wheel-item span {
+            position: absolute;
+            transform: translateY(-68px);
+            font-size: 11px;
+            font-weight: bold;
+            color: #451a03;
+        }
+    </style>
+</head>
+<body class="bg-amber-50/50 text-stone-700 min-h-screen flex flex-col justify-between pb-20">
+
+    <!-- 首次進入角色選擇 Modal -->
+    <div id="welcome-modal" class="fixed inset-0 bg-stone-900/60 backdrop-blur-xs hidden flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-amber-200 text-center">
+            <h2 class="text-xl font-bold text-amber-900 mb-2">👋 歡迎來到療癒幸運餅乾！</h2>
+            <p class="text-xs text-stone-500 mb-6">在開始之前，請先選擇一位陪你一起度過每一天的專屬小夥伴：</p>
+            
+            <div id="avatar-selection-grid" class="grid grid-cols-3 gap-3 mb-6">
+                <div onclick="selectAvatar('🐹', '小倉鼠')" class="cursor-pointer bg-amber-50 hover:bg-amber-100 border-2 border-amber-200 hover:border-amber-500 rounded-2xl p-3 transition flex flex-col items-center">
+                    <span class="text-3xl mb-1">🐹</span>
+                    <span class="text-[11px] font-bold text-stone-700">小倉鼠</span>
+                </div>
+                <div onclick="selectAvatar('🐱', '小貓咪')" class="cursor-pointer bg-amber-50 hover:bg-amber-100 border-2 border-amber-200 hover:border-amber-500 rounded-2xl p-3 transition flex flex-col items-center">
+                    <span class="text-3xl mb-1">🐱</span>
+                    <span class="text-[11px] font-bold text-stone-700">小貓咪</span>
+                </div>
+                <div onclick="selectAvatar('🐶', '小狗狗')" class="cursor-pointer bg-amber-50 hover:bg-amber-100 border-2 border-amber-200 hover:border-amber-500 rounded-2xl p-3 transition flex flex-col items-center">
+                    <span class="text-3xl mb-1">🐶</span>
+                    <span class="text-[11px] font-bold text-stone-700">小狗狗</span>
+                </div>
+                <div onclick="selectAvatar('🐰', '小兔子')" class="cursor-pointer bg-amber-50 hover:bg-amber-100 border-2 border-amber-200 hover:border-amber-500 rounded-2xl p-3 transition flex flex-col items-center">
+                    <span class="text-3xl mb-1">🐰</span>
+                    <span class="text-[11px] font-bold text-stone-700">小兔子</span>
+                </div>
+                <div onclick="selectAvatar('🦊', '小狐狸')" class="cursor-pointer bg-amber-50 hover:bg-amber-100 border-2 border-amber-200 hover:border-amber-500 rounded-2xl p-3 transition flex flex-col items-center">
+                    <span class="text-3xl mb-1">🦊</span>
+                    <span class="text-[11px] font-bold text-stone-700">小狐狸</span>
+                </div>
+                <div onclick="selectAvatar('🐼', '小貓熊')" class="cursor-pointer bg-amber-50 hover:bg-amber-100 border-2 border-amber-200 hover:border-amber-500 rounded-2xl p-3 transition flex flex-col items-center">
+                    <span class="text-3xl mb-1">🐼</span>
+                    <span class="text-[11px] font-bold text-stone-700">小貓熊</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 頁首與狀態列 -->
+    <header class="bg-white/90 backdrop-blur-md shadow-xs py-3 px-6 sticky top-0 z-40">
+        <div class="max-w-xl mx-auto flex justify-between items-center">
+            <div>
+                <h1 class="text-base font-bold text-amber-800">🥠 療癒幸運餅乾</h1>
+                <p class="text-[11px] text-stone-400">連續打卡：<span id="streak-count" class="font-bold text-amber-600">0</span> 天 🔥</p>
+            </div>
+            <div class="bg-amber-100/80 border border-amber-200 px-3 py-1 rounded-full flex items-center gap-1 text-amber-900 font-bold text-xs">
+                <span>🍪</span>
+                <span id="cookie-coins">0</span> 個餅乾
+            </div>
+        </div>
+    </header>
+
+    <!-- 主要內容區 -->
+    <main class="max-w-xl mx-auto px-4 py-6 w-full flex-grow space-y-6">
+        
+        <!-- 頁籤一：🏠 主頁 -->
+        <div id="tab-home" class="tab-content space-y-6">
+            <!-- 角色互動區 -->
+            <div class="bg-gradient-to-b from-amber-100/60 to-white rounded-3xl p-5 shadow-md border border-amber-100 text-center relative overflow-hidden">
+                <div class="flex justify-between items-center px-2 mb-1">
+                    <span class="text-[11px] font-bold text-amber-800 uppercase tracking-widest">✨ 專屬療癒小夥伴</span>
+                    <button onclick="resetAvatarPrompt()" class="text-[10px] text-stone-400 hover:text-amber-700 underline">更換夥伴</button>
+                </div>
+                
+                <div onclick="clickAvatar()" class="cursor-pointer relative w-24 h-24 mx-auto my-2 flex items-center justify-center bg-white rounded-full shadow-inner border border-amber-200 animate-bounce-slow">
+                    <span id="avatar-base" class="text-4xl">🐹</span>
+                    <span id="avatar-accessory" class="absolute top-1 text-xl"></span>
+                </div>
+                <p id="avatar-status" class="text-xs text-stone-500 font-medium">今天也要開心地過每一天喔！ (點我有驚喜)</p>
+            </div>
+
+            <!-- 幸運餅乾互動區 -->
+            <div class="bg-white rounded-3xl p-6 shadow-md border border-amber-100 text-center">
+                <h2 class="text-base font-bold text-stone-800 mb-1">今天過得怎麼樣？來掰開幸運餅乾吧！</h2>
+                <p class="text-[11px] text-stone-400 mb-4">點擊下方餅乾，獲得金句、隨機小任務與餅乾獎勵！</p>
+
+                <div id="cookie-container" class="cursor-pointer inline-block transition transform hover:scale-105 active:scale-95 py-2" onclick="openCookie()">
+                    <div id="cookie-icon-wrapper" class="text-6xl mb-1 flex justify-center items-center">
+                        <span id="cookie-left" class="transition-transform">🥠</span>
+                    </div>
+                    <span id="cookie-btn-text" class="inline-block bg-amber-600 text-white text-xs px-4 py-1.5 rounded-full font-medium shadow-sm">
+                        點擊掰開幸運餅乾
+                    </span>
+                </div>
+
+                <!-- 紙條結果區 -->
+                <div id="fortune-result" class="hidden mt-4 p-4 bg-amber-50/80 rounded-2xl border border-dashed border-amber-300 text-left transition-all">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-[11px] font-bold text-amber-700 bg-amber-200/60 px-2 py-0.5 rounded" id="fortune-date">日期</span>
+                        <span class="text-[11px] font-bold text-stone-500" id="fortune-luck">運勢：大吉</span>
+                    </div>
+                    <p id="fortune-text" class="text-stone-800 font-medium text-sm mb-3 leading-relaxed"></p>
+
+                    <div class="border-t border-amber-200 pt-3 mt-2">
+                        <label class="block text-[11px] font-bold text-amber-900 mb-1.5">✨ 今日微小成就挑戰：</label>
+                        
+                        <div id="random-task-box" class="bg-white p-2.5 rounded-xl border border-amber-200 mb-2.5 flex items-center justify-between">
+                            <span id="random-task-text" class="text-xs text-stone-800 font-medium">載入中...</span>
+                            <button onclick="drawRandomTask()" class="text-[10px] bg-amber-100 text-amber-800 hover:bg-amber-200 px-2.5 py-1 rounded-lg font-medium transition shrink-0 ml-2">🎲 換一個</button>
+                        </div>
+
+                        <div class="flex justify-between items-center mb-1.5">
+                            <span class="text-[10px] text-stone-400">想自訂記錄？👇</span>
+                            <button onclick="toggleInputMode()" id="mode-switch-btn" class="text-[10px] text-amber-700 hover:underline font-medium">切換自訂輸入</button>
+                        </div>
+
+                        <div id="custom-input-container" class="hidden flex gap-2 mb-2.5">
+                            <input type="text" id="daily-task-input" placeholder="輸入今天完成的小事情..." class="flex-grow bg-white border border-stone-300 text-xs rounded-xl px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-amber-500">
+                        </div>
+
+                        <button onclick="saveTask()" class="w-full bg-amber-700 hover:bg-amber-800 text-white text-xs py-2 rounded-xl font-medium transition shadow-xs">存入玻璃罐 & 領取 🍪 +1</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 轉盤區 -->
+            <div class="bg-white rounded-3xl p-6 shadow-md border border-amber-100 text-center">
+                <h3 class="font-bold text-stone-800 text-base mb-1">🎡 幸運轉轉盤</h3>
+                <p class="text-[11px] text-stone-400 mb-4">每次消耗 1 個小餅乾，試試你的手氣！</p>
+                
+                <div class="relative w-56 h-56 mx-auto mb-4 flex items-center justify-center">
+                    <div class="absolute -top-3 z-30 w-0 h-0 border-l-[10px] border-l-transparent border-r-[10px] border-r-transparent border-t-[18px] border-t-rose-600 drop-shadow-md"></div>
+                    
+                    <div id="wheel-container" class="w-full h-full rounded-full border-4 border-amber-400 relative overflow-hidden shadow-inner">
+                        <div class="wheel-item" style="transform: rotate(36deg);"><span>0 餅乾</span></div>
+                        <div class="wheel-item" style="transform: rotate(108deg);"><span>+1 餅乾</span></div>
+                        <div class="wheel-item" style="transform: rotate(180deg);"><span>+2 餅乾</span></div>
+                        <div class="wheel-item" style="transform: rotate(252deg);"><span>+4 餅乾</span></div>
+                        <div class="wheel-item" style="transform: rotate(324deg);"><span>🦄 獨角獸</span></div>
+
+                        <div class="absolute inset-0 m-auto w-10 h-10 bg-white rounded-full z-20 border-2 border-amber-500 shadow flex items-center justify-center text-sm font-bold">🎯</div>
+                    </div>
+                </div>
+
+                <div id="wheel-result" class="bg-amber-50 text-amber-900 text-xs font-bold py-2.5 px-4 rounded-xl mb-4 border border-amber-200">
+                    點擊下方按鈕開始轉動轉盤！
+                </div>
+                <button id="spin-btn" onclick="spinWheel()" class="bg-amber-600 hover:bg-amber-700 text-white text-xs px-6 py-2.5 rounded-full font-bold shadow transition">
+                    🎲 開始轉動 (花費 🍪 1)
+                </button>
+            </div>
+        </div>
+
+        <!-- 頁籤二：🏺 玻璃罐博物館 -->
+        <div id="tab-jar" class="tab-content hidden space-y-6">
+            <div class="bg-white rounded-3xl p-6 shadow-md border border-amber-100">
+                <div class="flex justify-between items-center mb-3">
+                    <h3 class="font-bold text-stone-800 text-base">🏺 透明餅乾玻璃罐</h3>
+                    <button onclick="clearHistory()" class="text-xs text-rose-500 hover:underline">重置紀錄</button>
+                </div>
+                <p class="text-xs text-stone-400 mb-4">罐內的幸運餅乾數量即代表你的打卡天數與所有回憶：</p>
+                
+                <div class="relative w-44 h-52 mx-auto bg-sky-50/50 border-4 border-stone-300 rounded-b-3xl rounded-t-xl shadow-inner flex flex-col justify-end p-3 overflow-hidden mb-6">
+                    <div class="absolute top-0 left-1/2 -transform -translate-x-1/2 w-24 h-3 bg-stone-300 rounded-b-md"></div>
+                    <div id="jar-cookies" class="flex flex-wrap-reverse gap-1.5 justify-center items-end max-h-40 overflow-y-auto p-1"></div>
+                </div>
+
+                <div id="task-list" class="space-y-2 max-h-48 overflow-y-auto pr-1 border-t border-stone-100 pt-3">
+                    <div class="text-center text-stone-400 text-xs py-4">目前罐子裡還空空的，快去主頁掰開餅乾吧！</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 頁籤三：🎒 造型衣櫥 -->
+        <div id="tab-wardrobe" class="tab-content hidden space-y-6">
+            <div class="bg-white rounded-3xl p-6 shadow-md border border-amber-100">
+                <h3 class="font-bold text-stone-800 text-base mb-1">🎒 小夥伴造型衣櫥</h3>
+                <p class="text-xs text-stone-400 mb-4">使用打卡或轉盤獲得的小餅乾來解鎖可愛配件：</p>
+                <div id="accessory-store" class="space-y-3"></div>
+            </div>
+        </div>
+
+        <!-- 頁籤四：📊 數據統計室 -->
+        <div id="tab-stats" class="tab-content hidden space-y-6">
+            <div class="bg-white rounded-3xl p-6 shadow-md border border-amber-100 space-y-4">
+                <h3 class="font-bold text-stone-800 text-base">📊 數據統計室</h3>
+                <p class="text-xs text-stone-400">檢視你的長期養成與打卡表現：</p>
+                
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="bg-amber-50/70 p-4 rounded-2xl border border-amber-200 text-center">
+                        <span class="text-2xl font-bold text-amber-800" id="stat-total-days">0</span>
+                        <p class="text-xs text-stone-500 mt-1">累計打卡天數</p>
+                    </div>
+                    <div class="bg-amber-50/70 p-4 rounded-2xl border border-amber-200 text-center">
+                        <span class="text-2xl font-bold text-amber-800" id="stat-streak">0</span>
+                        <p class="text-xs text-stone-500 mt-1">目前連續打卡</p>
+                    </div>
+                    <div class="bg-amber-50/70 p-4 rounded-2xl border border-amber-200 text-center">
+                        <span class="text-2xl font-bold text-amber-800" id="stat-coins">0</span>
+                        <p class="text-xs text-stone-500 mt-1">目前剩餘餅乾</p>
+                    </div>
+                    <div class="bg-amber-50/70 p-4 rounded-2xl border border-amber-200 text-center">
+                        <span class="text-2xl font-bold text-amber-800" id="stat-rate">0%</span>
+                        <p class="text-xs text-stone-500 mt-1">本月達成率 (以30天計)</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- 底部固定導覽列 -->
+    <nav class="bg-white/95 backdrop-blur-md border-t border-stone-200 fixed bottom-0 left-0 right-0 py-2.5 px-4 z-40 shadow-lg">
+        <div class="max-w-xl mx-auto flex justify-around">
+            <button onclick="switchTab('home')" id="nav-home" class="flex flex-col items-center text-amber-700 font-bold text-xs transition">
+                <span class="text-lg">🏠</span>主頁
+            </button>
+            <button onclick="switchTab('jar')" id="nav-jar" class="flex flex-col items-center text-stone-400 hover:text-amber-700 font-bold text-xs transition">
+                <span class="text-lg">🏺</span>玻璃罐
+            </button>
+            <button onclick="switchTab('wardrobe')" id="nav-wardrobe" class="flex flex-col items-center text-stone-400 hover:text-amber-700 font-bold text-xs transition">
+                <span class="text-lg">🎒</span>衣櫥
+            </button>
+            <button onclick="switchTab('stats')" id="nav-stats" class="flex flex-col items-center text-stone-400 hover:text-amber-700 font-bold text-xs transition">
+                <span class="text-lg">📊</span>統計室
+            </button>
+        </div>
+    </nav>
+
+    <!-- JavaScript 遊戲邏輯與互動 -->
+    <script>
+        const fortunes = [
+            { text: "「生活總會給你答案，但不會馬上把所有祕密都告訴你。慢慢來, 妳已經做得很好囉。」", luck: "運勢：小確幸" },
+            { text: "「允許自己偶爾停下腳步，休息不是浪費時間，是為了走更長遠的路。」", luck: "運勢：大吉" },
+            { text: "「今天只要完成一件微小的事，妳就是自己的超人。給自己一個大大的擁抱吧！」", luck: "運勢：順遂" },
+            { text: "「不要小看每天進步一點點的力量，一個月後的妳會感謝現在的堅持。」", luck: "運勢：吉" },
+            { text: "「如果今天有點累，那就吃個好吃的，早點休息，明天又是新的一天。」", luck: "運勢：溫馨" }
+        ];
+
+        const randomTasks = [
+            "喝了一大杯溫水，好好照顧了身體 💧",
+            "去陽台或窗邊看天空 5 分鐘，放空思緒 🌤️",
+            "對自己說了一句『今天辛苦啦！』 💖",
+            "聽了一首喜歡的歌, 心情變得很放鬆 🎧",
+            "拉筋伸展 10 分鐘，舒緩緊繃的肌肉 🧘‍♀️",
+            "早睡 15 分鐘，給自己充足的睡眠 🌙"
+        ];
+
+        let accessories = [
+            { id: 'hat', name: '頂級魔法帽 🎩', price: 3, icon: '🎩' },
+            { id: 'glasses', name: '學霸黑框眼鏡 👓', price: 5, icon: '👓' },
+            { id: 'scarf', name: '暖心紅色圍巾 🧣', price: 8, icon: '🧣' },
+            { id: 'crown', name: '閃亮尊爵皇冠 👑', price: 15, icon: '👑' },
+            { id: 'rainbow', name: '轉盤限定·彩虹眼鏡 🌈', price: 20, icon: '🌈' }
+        ];
+
+        let state = {
+            avatar: "",
+            avatarName: "",
+            coins: 3,
+            streak: 0,
+            lastOpenDate: "",
+            history: [],
+            unlockedAccessories: [],
+            equippedAccessory: "",
+            clickCount: 0,
+            hasUnicorn: false
+        };
+
+        let spinCounter = 0;
+
+        function loadData() {
+            const saved = JSON.parse(localStorage.getItem('fortune_pet_state_v15'));
+            if (saved && saved.avatar) {
+                state = saved;
+            } else {
+                document.getElementById('welcome-modal').classList.remove('hidden');
+            }
+            renderAvatarSelection();
+            renderAll();
+        }
+
+        function saveData() {
+            localStorage.setItem('fortune_pet_state_v15', JSON.stringify(state));
+        }
+
+        function renderAvatarSelection() {
+            const grid = document.getElementById('avatar-selection-grid');
+            let html = `
+                <div onclick="selectAvatar('🐹', '小倉鼠')" class="cursor-pointer bg-amber-50 hover:bg-amber-100 border-2 border-amber-200 hover:border-amber-500 rounded-2xl p-3 transition flex flex-col items-center">
+                    <span class="text-3xl mb-1">🐹</span>
+                    <span class="text-[11px] font-bold text-stone-700">小倉鼠</span>
+                </div>
+                <div onclick="selectAvatar('🐱', '小貓咪')" class="cursor-pointer bg-amber-50 hover:bg-amber-100 border-2 border-amber-200 hover:border-amber-500 rounded-2xl p-3 transition flex flex-col items-center">
+                    <span class="text-3xl mb-1">🐱</span>
+                    <span class="text-[11px] font-bold text-stone-700">小貓咪</span>
+                </div>
+                <div onclick="selectAvatar('🐶', '小狗狗')" class="cursor-pointer bg-amber-50 hover:bg-amber-100 border-2 border-amber-200 hover:border-amber-500 rounded-2xl p-3 transition flex flex-col items-center">
+                    <span class="text-3xl mb-1">🐶</span>
+                    <span class="text-[11px] font-bold text-stone-700">小狗狗</span>
+                </div>
+                <div onclick="selectAvatar('🐰', '小兔子')" class="cursor-pointer bg-amber-50 hover:bg-amber-100 border-2 border-amber-200 hover:border-amber-500 rounded-2xl p-3 transition flex flex-col items-center">
+                    <span class="text-3xl mb-1">🐰</span>
+                    <span class="text-[11px] font-bold text-stone-700">小兔子</span>
+                </div>
+                <div onclick="selectAvatar('🦊', '小狐狸')" class="cursor-pointer bg-amber-50 hover:bg-amber-100 border-2 border-amber-200 hover:border-amber-500 rounded-2xl p-3 transition flex flex-col items-center">
+                    <span class="text-3xl mb-1">🦊</span>
+                    <span class="text-[11px] font-bold text-stone-700">小狐狸</span>
+                </div>
+                <div onclick="selectAvatar('🐼', '小貓熊')" class="cursor-pointer bg-amber-50 hover:bg-amber-100 border-2 border-amber-200 hover:border-amber-500 rounded-2xl p-3 transition flex flex-col items-center">
+                    <span class="text-3xl mb-1">🐼</span>
+                    <span class="text-[11px] font-bold text-stone-700">小貓熊</span>
+                </div>
+            `;
+            if (state.hasUnicorn) {
+                html += `
+                    <div onclick="selectAvatar('🦄', '神祕獨角獸')" class="cursor-pointer bg-purple-50 hover:bg-purple-100 border-2 border-purple-300 hover:border-purple-500 rounded-2xl p-3 transition flex flex-col items-center col-span-3">
+                        <span class="text-3xl mb-1">🦄</span>
+                        <span class="text-[11px] font-bold text-purple-800">✨ 轉盤解鎖・神祕獨角獸 ✨</span>
+                    </div>
+                `;
+            }
+            grid.innerHTML = html;
+        }
+
+        function selectAvatar(icon, name) {
+            state.avatar = icon;
+            state.avatarName = name;
+            saveData();
+            document.getElementById('welcome-modal').classList.add('hidden');
+            renderAll();
+        }
+
+        function resetAvatarPrompt() {
+            renderAvatarSelection();
+            document.getElementById('welcome-modal').classList.remove('hidden');
+        }
+
+        function clickAvatar() {
+            state.clickCount++;
+            const statusEl = document.getElementById('avatar-status');
+            if (state.clickCount >= 5) {
+                state.clickCount = 0;
+                state.coins += 2;
+                saveData();
+                renderAll();
+                statusEl.innerText = "✨ 哎呀！被你戳太多次了啦... 這是給你的隱藏小餅乾 🍪+2！";
+            } else {
+                statusEl.innerText = `${state.avatarName} 正在對你微笑，加油喔！`;
+            }
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.getElementById('tab-' + tabId).classList.remove('hidden');
+
+            ['home', 'jar', 'wardrobe', 'stats'].forEach(id => {
+                const btn = document.getElementById('nav-' + id);
+                if (id === tabId) {
+                    btn.className = "flex flex-col items-center text-amber-700 font-bold text-xs transition";
+                } else {
+                    btn.className = "flex flex-col items-center text-stone-400 hover:text-amber-700 font-bold text-xs transition";
+                }
+            });
+        }
+
+        function openCookie() {
+            const todayStr = new Date().toDateString();
+            if (state.lastOpenDate === todayStr) {
+                alert("今天已經開過幸運餅乾囉！明天再來挑戰連續打卡吧 🥠");
+                return;
+            }
+
+            const cookieIcon = document.getElementById('cookie-left');
+            const btnText = document.getElementById('cookie-btn-text');
+
+            cookieIcon.innerHTML = "💥🥠💥";
+            btnText.innerText = "幸運餅乾掰開中...";
+
+            setTimeout(() => {
+                cookieIcon.innerHTML = "✨📜✨";
+                btnText.innerText = "今日幸運餅乾已領取！";
+                
+                const randomFortuneIndex = Math.floor(Math.random() * fortunes.length);
+                const selectedFortune = fortunes[randomFortuneIndex];
+                
+                const today = new Date();
+                const dateStr = `${today.getMonth() + 1}月${today.getDate()}日`;
+
+                document.getElementById('fortune-date').innerText = dateStr;
+                document.getElementById('fortune-luck').innerText = selectedFortune.luck;
+                document.getElementById('fortune-text').innerText = selectedFortune.text;
+                
+                currentFortuneString = selectedFortune.text;
+                drawRandomTask();
+
+                document.getElementById('fortune-result').classList.remove('hidden');
+            }, 400);
+        }
+
+        let currentFortuneString = "";
+        let currentSelectedTask = "";
+        let isCustomMode = false;
+
+        function drawRandomTask() {
+            const randomIndex = Math.floor(Math.random() * randomTasks.length);
+            currentSelectedTask = randomTasks[randomIndex];
+            document.getElementById('random-task-text').innerText = currentSelectedTask;
+        }
+
+        function toggleInputMode() {
+            isCustomMode = !isCustomMode;
+            document.getElementById('random-task-box').classList.toggle('hidden', isCustomMode);
+            document.getElementById('custom-input-container').classList.toggle('hidden', !isCustomMode);
+            document.getElementById('mode-switch-btn').innerText = isCustomMode ? "切換隨機小任務" : "切換自訂輸入";
+        }
+
+        function saveTask() {
+            let taskToSave = isCustomMode ? document.getElementById('daily-task-input').value.trim() : currentSelectedTask;
+            if (isCustomMode && !taskToSave) {
+                alert("請先輸入內容！");
+                return;
+            }
+
+            const today = new Date();
+            const todayStr = today.toDateString();
+
+            state.coins += 1;
+            state.streak += 1;
+            state.lastOpenDate = todayStr;
+
+            const newItem = {
+                date: `${today.getFullYear()}/${today.getMonth() + 1}/${today.getDate()}`,
+                task: taskToSave,
+                fortune: currentFortuneString
+            };
+
+            state.history.unshift(newItem);
+            saveData();
+            renderAll();
+
+            alert("🎉 恭喜完成打卡！幸運餅乾順利掉進玻璃罐囉 🥠✨");
+            document.getElementById('fortune-result').classList.add('hidden');
+            document.getElementById('cookie-left').innerHTML = "🥠";
+            document.getElementById('cookie-btn-text').innerText = "點擊掰開幸運餅乾";
+        }
+
+        function spinWheel() {
+            if (state.coins < 1) {
+                alert("小餅乾數量不足！快去打卡或戳小夥伴領取餅乾吧！🍪");
+                return;
+            }
+
+            const spinBtn = document.getElementById('spin-btn');
+            spinBtn.disabled = true;
+            document.getElementById('wheel-result').innerText = "🎡 轉盤高速旋轉中...";
+
+            state.coins -= 1;
+            saveData();
+            renderAll();
+
+            const rand = Math.random() * 100;
+            let prizeIndex = 0;
+            let resultMsg = "";
+
+            if (rand < 40) {
+                prizeIndex = 0;
+                resultMsg = "銘謝惠顧！獲得安慰金句：「失敗為成功之母，明天再接再厲！」";
+            } else if (rand < 75) {
+                prizeIndex = 1;
+                state.coins += 1;
+                resultMsg = "小回血！獲得 🍪 +1 (剛好打平)";
+            } else if (rand < 90) {
+                prizeIndex = 2;
+                state.coins += 2;
+                resultMsg = "小賺一筆！獲得 🍪 +2 🎉";
+            } else if (rand < 97) {
+                prizeIndex = 3;
+                state.coins += 4;
+                resultMsg = "幸運大爆發！獲得 🍪 +4 🌟";
+            } else {
+                prizeIndex = 4;
+                state.hasUnicorn = true;
+                resultMsg = "🦄 太神啦！轉中傳說大獎，成功解鎖【神祕獨角獸】隱藏角色！";
+            }
+
+            const centerAngles = [36, 108, 180, 252, 324];
+            const targetCenter = centerAngles[prizeIndex];
+
+            spinCounter++;
+            const randomOffset = (Math.random() - 0.5) * 30;
+            const absoluteAngle = (spinCounter * 1800) + (360 - targetCenter) + randomOffset;
+
+            const wheelContainer = document.getElementById('wheel-container');
+            wheelContainer.style.transform = `rotate(${absoluteAngle}deg)`;
+
+            setTimeout(() => {
+                saveData();
+                renderAvatarSelection();
+                renderAll();
+                document.getElementById('wheel-result').innerText = resultMsg;
+                spinBtn.disabled = false;
+            }, 4000);
+        }
+
+        function renderAll() {
+            if (state.avatar) {
+                document.getElementById('avatar-base').innerText = state.avatar;
+            }
+
+            document.getElementById('cookie-coins').innerText = state.coins;
+            document.getElementById('streak-count').innerText = state.streak;
+
+            document.getElementById('stat-total-days').innerText = state.history.length;
+            document.getElementById('stat-streak').innerText = state.streak;
+            document.getElementById('stat-coins').innerText = state.coins;
+            document.getElementById('stat-rate').innerText = Math.min(100, Math.round((state.history.length / 30) * 100)) + '%';
+
+            const accObj = accessories.find(a => a.id === state.equippedAccessory);
+            document.getElementById('avatar-accessory').innerText = accObj ? accObj.icon : '';
+
+            const jarEl = document.getElementById('jar-cookies');
+            let jarHtml = '';
+            for (let i = 0; i < state.history.length; i++) {
+                const isLatest = (i === 0);
+                jarHtml += `<span class="text-2xl ${isLatest ? 'animate-drop' : ''}">🥠</span>`;
+            }
+            jarEl.innerHTML = jarHtml;
+
+            const taskListEl = document.getElementById('task-list');
+            if (state.history.length === 0) {
+                taskListEl.innerHTML = `<div class="text-center text-stone-400 text-xs py-4">目前罐子裡還空空的，快去主頁掰開餅乾吧！</div>`;
+            } else {
+                let html = '';
+                state.history.forEach(item => {
+                    html += `
+                        <div class="bg-amber-50/60 p-2.5 rounded-xl border border-amber-200/60 flex flex-col gap-0.5 text-xs">
+                            <div class="flex justify-between items-center text-[10px] text-stone-400 font-medium">
+                                <span>📅 ${item.date}</span>
+                                <span class="text-amber-800 bg-amber-100 px-1.5 py-0.5 rounded">打卡解鎖</span>
+                            </div>
+                            <p class="text-stone-800 font-medium">✨ ${item.task}</p>
+                        </div>
+                    `;
+                });
+                taskListEl.innerHTML = html;
+            }
+
+            const storeEl = document.getElementById('accessory-store');
+            let storeHtml = '';
+            accessories.forEach(acc => {
+                const isUnlocked = state.unlockedAccessories.includes(acc.id);
+                const isEquipped = state.equippedAccessory === acc.id;
+
+                storeHtml += `
+                    <div class="flex justify-between items-center bg-stone-50 p-3 rounded-2xl border border-stone-200">
+                        <div class="flex items-center gap-3">
+                            <span class="text-2xl">${acc.icon}</span>
+                            <div>
+                                <h4 class="text-xs font-bold text-stone-800">${acc.name}</h4>
+                                <p class="text-[11px] text-stone-400">價格：${acc.price} 餅乾</p>
+                            </div>
+                        </div>
+                        <div>
+                            ${isUnlocked ? 
+                                `<button onclick="equipAccessory('${acc.id}')" class="text-xs px-3 py-1.5 rounded-lg font-medium ${isEquipped ? 'bg-amber-600 text-white' : 'bg-stone-200 text-stone-700 hover:bg-stone-300'}">${isEquipped ? '已裝備' : '裝備'}</button>` :
+                                `<button onclick="buyAccessory('${acc.id}', ${acc.price})" class="text-xs bg-amber-700 text-white hover:bg-amber-800 px-3 py-1.5 rounded-lg font-medium">解鎖</button>`
+                            }
+                        </div>
+                    </div>
+                `;
+            });
+            storeEl.innerHTML = storeHtml;
+        }
+
+        function buyAccessory(id, price) {
+            if (state.coins < price) {
+                alert("小餅乾數量不足！快去打卡或轉轉盤賺取餅乾吧！🍪");
+                return;
+            }
+            state.coins -= price;
+            state.unlockedAccessories.push(id);
+            state.equippedAccessory = id;
+            saveData();
+            renderAll();
+            alert("✨ 成功解鎖並裝備新配件！");
+        }
+
+        function equipAccessory(id) {
+            state.equippedAccessory = (state.equippedAccessory === id) ? "" : id;
+            saveData();
+            renderAll();
+        }
+
+        function clearHistory() {
+            if (confirm("確定要重置所有紀錄與夥伴資料嗎？")) {
+                localStorage.removeItem('fortune_pet_state_v15');
+                location.reload();
+            }
+        }
+
+        window.onload = function() {
+            loadData();
+        };
+    </script>
+</body>
+</html>
